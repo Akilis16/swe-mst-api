@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mst-db
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Bahia
+    ports:
+      - "9876:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_admin -d mst_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+
+  api:
+    image: maven:3.9.6-eclipse-temurin-21
+    container_name: mst-api
+    restart: unless-stopped
+    ports:
+      - "4000:8080"
+    volumes:
+      - .:/app
+      - ~/.m2:/root/.m2
+      - /etc/localtime:/etc/localtime:ro
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TZ=America/Bahia
+    env_file:
+      - .env
+    command: mvn spring-boot:run
+
+volumes:
+  postgres_data:
