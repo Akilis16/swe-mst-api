@@ -1,10 +1,42 @@
 # swe-mst-api
 
-### Api for the system MST to the development of cognitive abilities 
+Api for the system MST to the development of cognitive abilities 
 
----
 
-#### Database diagram
+## Stacks
+
+- Language: Java 21
+- Framework: SpringBoot 4.1
+- Build Tool: Maven
+- Architecture: Package by Feature
+- Patterns: SoftDeletes
+- Database: Postgres 15
+- Containerization: Docker & Docker Compose
+
+## How to run
+
+### Clone the repository
+
+``` bash
+    git clone https://github.com/Akilis16/swe-mst-api
+    cd ./swe-mst-api
+```
+
+### Make the .env file
+
+``` bash
+    cp .env.example .env
+```
+
+### Run the application
+
+``` bash
+    mvn spring-boot:run OR docker compose up -d
+```
+
+## Diagrams
+
+### Database
 
 ``` mermaid
 erDiagram
