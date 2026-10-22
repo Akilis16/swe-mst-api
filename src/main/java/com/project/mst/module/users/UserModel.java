@@ -1,6 +1,9 @@
 package com.project.mst.module.users;
 
 import com.project.mst.infra.database.model.Model; 
+import com.project.mst.module.profiles.ProfileModel;
+
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,7 +30,7 @@ public class UserModel extends Model {
     @Column(name = "email", unique = true, nullable = false)
     protected String email;
     
-    @Column(name = "password")
+    @Column(name = "password_hash")
     protected String password;
 
     @Column(name = "avatar_url")
@@ -37,7 +40,11 @@ public class UserModel extends Model {
     @JoinTable(
         name = "user_profile",
         joinColumns = @JoinColumn(
-            name = "id_profile",
+            name = "user_id",
+            referencedColumnName = "id"
+        ),
+        inverseJoinColumns = @JoinColumn(
+            name = "profile_id",
             referencedColumnName = "id"
         )
     ) 
