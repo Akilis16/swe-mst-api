@@ -28,7 +28,7 @@ public abstract class SoftDelete
     @Column(name = "id_user_deleted")
     private Long id_user_deleted;
     @Column(name = "deleted_at")
-    private Date deleted;
+    private Date deleted_at;
 
     @PrePersist
     protected void onCreate()
