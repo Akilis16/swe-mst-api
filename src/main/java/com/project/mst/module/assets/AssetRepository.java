@@ -1,9 +1,8 @@
 package com.project.mst.module.assets;
 
-import java.util.UUID;
+import com.project.mst.infra.database.repository.BaseRepository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface AssetRepository extends JpaRepository<AssetModel, UUID> {}
+public interface AssetRepository extends BaseRepository<AssetModel> {}

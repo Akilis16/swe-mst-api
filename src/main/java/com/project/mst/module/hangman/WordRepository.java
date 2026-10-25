@@ -1,12 +1,12 @@
 package com.project.mst.module.hangman;
 
 import java.util.Optional;
-import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.project.mst.infra.database.repository.BaseRepository;
+
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface WordRepository extends JpaRepository<WordModel, UUID> {
+public interface WordRepository extends BaseRepository<WordModel> {
     Optional<WordModel> findByWord(String word);
 }
