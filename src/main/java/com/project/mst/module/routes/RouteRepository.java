@@ -1,12 +1,12 @@
 package com.project.mst.module.routes;
 
 import java.util.Optional;
-import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.project.mst.infra.database.repository.BaseRepository;
+
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface RouteRepository extends JpaRepository<RouteModel, UUID> {
+public interface RouteRepository extends BaseRepository<RouteModel> {
     Optional<RouteModel> findByUrl(String url);
 }

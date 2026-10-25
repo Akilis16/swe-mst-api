@@ -1,9 +1,8 @@
 package com.project.mst.module.memory;
 
-import java.util.UUID;
+import com.project.mst.infra.database.repository.BaseRepository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface CardTemplateRepository extends JpaRepository<CardTemplateModel, UUID> {}
+public interface CardTemplateRepository extends BaseRepository<CardTemplateModel> {}

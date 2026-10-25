@@ -1,12 +1,12 @@
 package com.project.mst.module.users;
 
 import java.util.Optional;
-import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.project.mst.infra.database.repository.BaseRepository;
+
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserRepository extends JpaRepository<UserModel, UUID> {
+public interface UserRepository extends BaseRepository<UserModel> {
     Optional<UserModel> findByEmail(String email);
 }

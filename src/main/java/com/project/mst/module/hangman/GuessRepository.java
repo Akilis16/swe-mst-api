@@ -1,9 +1,8 @@
 package com.project.mst.module.hangman;
 
-import java.util.UUID;
+import com.project.mst.infra.database.repository.BaseRepository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface GuessRepository extends JpaRepository<GuessModel, UUID> {}
+public interface GuessRepository extends BaseRepository<GuessModel> {}

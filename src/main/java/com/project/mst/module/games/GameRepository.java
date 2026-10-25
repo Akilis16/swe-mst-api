@@ -1,12 +1,12 @@
 package com.project.mst.module.games;
 
 import java.util.Optional;
-import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.project.mst.infra.database.repository.BaseRepository;
+
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface GameRepository extends JpaRepository<GameModel, UUID> {
+public interface GameRepository extends BaseRepository<GameModel> {
     Optional<GameModel> findBySlug(String slug);
 }
