@@ -2,6 +2,8 @@ package com.project.mst.infra.database.model;
 
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -11,6 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @MappedSuperclass 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Getter 
 @Setter 
 public abstract class Model extends SoftDelete {    
