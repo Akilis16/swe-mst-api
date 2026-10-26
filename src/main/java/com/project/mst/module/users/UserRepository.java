@@ -9,4 +9,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends BaseRepository<UserModel> {
     Optional<UserModel> findByEmail(String email);
+
+    boolean existsByName(String name);
 }

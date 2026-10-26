@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.project.mst.infra.database.model.Model;
 import com.project.mst.infra.database.repository.BaseRepository;
+import com.project.mst.infra.security.CurrentUser;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,7 @@ public abstract class CrudService<T extends Model> {
     @Transactional
     public T create(T entity) {
         entity.setId(null);
+        CurrentUser.id().ifPresent(entity::setId_user_created);
         return repository.save(entity);
     }
 
@@ -53,6 +55,7 @@ public abstract class CrudService<T extends Model> {
         entity.setId(current.getId());
         entity.setCreated_at(current.getCreated_at());
         entity.setId_user_created(current.getId_user_created());
+        CurrentUser.id().ifPresent(entity::setId_user_updated);
 
         return repository.save(entity);
     }
@@ -61,6 +64,7 @@ public abstract class CrudService<T extends Model> {
     public void delete(UUID id) {
         T current = findById(id);
         current.setDeleted_at(new Date());
+        CurrentUser.id().ifPresent(current::setId_user_deleted);
         repository.save(current);
     }
 }

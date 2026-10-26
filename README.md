@@ -34,6 +34,31 @@ Api for the system MST to the development of cognitive abilities
     mvn spring-boot:run OR docker compose up -d
 ```
 
+## Authentication
+
+All endpoints require a JWT bearer token, except `POST /auth/register` and `POST /auth/login`.
+Tokens are signed with HMAC-SHA256 using `JWT_SECRET` (at least 32 characters) and expire after
+`JWT_EXPIRATION_SECONDS` (default 3600). Passwords are stored as BCrypt hashes.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/auth/register` | public | Creates a user (`name`, `email`, `password` ≥ 8 chars, optional `avatarUrl`) and returns a token. |
+| `POST` | `/auth/login` | public | Returns a token for valid `email` + `password`; `401` otherwise. |
+| `GET` | `/auth/me` | bearer | Returns the authenticated user. |
+
+``` bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ana@example.com","password":"segredo123"}'
+# {"accessToken":"<jwt>","tokenType":"Bearer","expiresIn":3600,"user":{...}}
+
+curl http://localhost:8080/games -H "Authorization: Bearer <jwt>"
+```
+
+The token carries the user id as `sub` and the user's profile names as `roles`
+(`ROLE_<NAME>` authorities), so `@PreAuthorize("hasRole('ADMIN')")` can be used on endpoints.
+Errors follow RFC 9457 Problem Details (`application/problem+json`).
+
 ## Diagrams
 
 ### Database

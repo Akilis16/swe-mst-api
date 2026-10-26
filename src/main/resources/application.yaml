@@ -1,3 +1,11 @@
 spring:
   application:
     name: mst
+  mvc:
+    problemdetails:
+      enabled: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
