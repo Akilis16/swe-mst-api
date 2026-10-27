@@ -1,7 +1,6 @@
 package com.project.mst.module.auth;
 
-import java.util.ArrayList;
-import java.util.Locale;
+import java.util.LinkedHashSet;
 import java.util.UUID;
 
 import com.project.mst.infra.security.CurrentUser;
@@ -53,7 +52,7 @@ public class AuthService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setAvatar_url(request.avatarUrl());
-        user.setProfiles(new ArrayList<>());
+        user.setProfiles(new LinkedHashSet<>());
 
         user = users.save(user);
         return token(user);
@@ -87,6 +86,6 @@ public class AuthService {
     }
 
     private static String normalizeEmail(String email) {
-        return email.trim().toLowerCase(Locale.ROOT);
+        return UserModel.normalizeEmail(email);
     }
 }

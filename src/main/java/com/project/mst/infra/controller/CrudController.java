@@ -7,6 +7,7 @@ import java.util.UUID;
 import com.project.mst.infra.database.model.Model;
 import com.project.mst.infra.service.CrudService;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,7 +36,7 @@ public abstract class CrudController<T extends Model> {
     }
 
     @PostMapping
-    public ResponseEntity<T> create(@RequestBody T entity) {
+    public ResponseEntity<T> create(@Valid @RequestBody T entity) {
         T created = service.create(entity);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
             .path("/{id}")
@@ -46,7 +47,7 @@ public abstract class CrudController<T extends Model> {
     }
 
     @PutMapping("/{id}")
-    public T update(@PathVariable UUID id, @RequestBody T entity) {
+    public T update(@PathVariable UUID id, @Valid @RequestBody T entity) {
         return service.update(id, entity);
     }
 

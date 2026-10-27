@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +45,18 @@ public class ExceptionHandlerController {
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError error : exception.getBindingResult().getFieldErrors()) {
             errors.putIfAbsent(error.getField(), error.getDefaultMessage());
+        }
+
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Dados inválidos");
+        problem.setProperty("errors", errors);
+        return problem;
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolation(ConstraintViolationException exception) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
+            errors.putIfAbsent(violation.getPropertyPath().toString(), violation.getMessage());
         }
 
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Dados inválidos");
