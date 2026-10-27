@@ -8,6 +8,8 @@ import java.util.Date;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -34,6 +36,10 @@ public class PlaySessionModel extends Model {
     @JoinColumn(name = "game_id", nullable = false)
     protected GameModel game;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20)
+    protected PlaySessionStatus status;
+
     @Column(name = "started_at")
     protected Date started_at;
 
@@ -47,4 +53,11 @@ public class PlaySessionModel extends Model {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "result_summary", columnDefinition = "jsonb")
     protected String result_summary;
+
+    public boolean isOpen() {
+        if (status != null) {
+            return status == PlaySessionStatus.IN_PROGRESS;
+        }
+        return ended_at == null;
+    }
 }

@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
@@ -22,5 +23,25 @@ public final class CurrentUser {
         } catch (IllegalArgumentException | NullPointerException e) {
             return Optional.empty();
         }
+    }
+
+    public static boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return false;
+        }
+        String authority = "ROLE_" + role;
+        return authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(authority::equals);
+    }
+
+    public static boolean isAdmin() {
+        return hasRole(Roles.ADMIN);
+    }
+
+    /** O usuário autenticado é o dono do recurso ou é administrador. */
+    public static boolean owns(UUID ownerId) {
+        return isAdmin() || (ownerId != null && id().filter(ownerId::equals).isPresent());
     }
 }

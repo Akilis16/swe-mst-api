@@ -31,8 +31,8 @@ public class ScoreModel extends Model {
     @JoinColumn(name = "game_id", nullable = false)
     protected GameModel game;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "play_session_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "play_session_id", nullable = false, unique = true)
     protected PlaySessionModel play_session;
 
     @Column(name = "score_value", nullable = false)

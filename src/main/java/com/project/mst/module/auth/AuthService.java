@@ -5,10 +5,12 @@ import java.util.UUID;
 
 import com.project.mst.infra.security.CurrentUser;
 import com.project.mst.infra.security.JwtService;
+import com.project.mst.infra.security.Roles;
 import com.project.mst.module.auth.dto.LoginRequest;
 import com.project.mst.module.auth.dto.RegisterRequest;
 import com.project.mst.module.auth.dto.TokenResponse;
 import com.project.mst.module.auth.dto.UserResponse;
+import com.project.mst.module.profiles.ProfileRepository;
 import com.project.mst.module.users.UserModel;
 import com.project.mst.module.users.UserRepository;
 
@@ -26,11 +28,14 @@ public class AuthService {
     private static final String INVALID_CREDENTIALS = "Credenciais inválidas";
 
     private final UserRepository users;
+    private final ProfileRepository profiles;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public AuthService(UserRepository users, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository users, ProfileRepository profiles,
+            PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.users = users;
+        this.profiles = profiles;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
@@ -53,6 +58,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setAvatar_url(request.avatarUrl());
         user.setProfiles(new LinkedHashSet<>());
+        profiles.findByName(Roles.PLAYER).ifPresent(user.getProfiles()::add);
 
         user = users.save(user);
         return token(user);

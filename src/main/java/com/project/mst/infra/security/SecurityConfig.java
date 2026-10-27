@@ -30,13 +30,21 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, BootstrapProperties.class})
 public class SecurityConfig {
 
-    /** HMAC-SHA256 exige chave de pelo menos 256 bits. */
     private static final int MIN_SECRET_BYTES = 32;
 
     public static final String ROLES_CLAIM = "roles";
+
+    private static final String[] ADMIN_ONLY = {
+        "/users/**", "/profiles/**", "/routes/**"
+    };
+
+    private static final String[] CONTENT = {
+        "/games/**", "/assets/**", "/quizzes/**", "/questions/**", "/options/**",
+        "/card-templates/**", "/sudoku/**", "/words/**"
+    };
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter)
@@ -47,6 +55,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
+                .requestMatchers(ADMIN_ONLY).hasRole(Roles.ADMIN)
+                .requestMatchers(HttpMethod.GET, CONTENT).authenticated()
+                .requestMatchers(CONTENT).hasRole(Roles.ADMIN)
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
@@ -54,7 +65,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** Converte o claim "roles" do token em authorities ROLE_*. */
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
@@ -78,7 +88,6 @@ public class SecurityConfig {
         return new NimbusJwtEncoder(new ImmutableSecret<>(secretKey(properties)));
     }
 
-    /** BCrypt por padrão, com prefixo {id} para permitir troca de algoritmo no futuro. */
     @Bean
     PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();

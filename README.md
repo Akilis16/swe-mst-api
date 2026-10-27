@@ -56,8 +56,35 @@ curl http://localhost:8080/games -H "Authorization: Bearer <jwt>"
 ```
 
 The token carries the user id as `sub` and the user's profile names as `roles`
-(`ROLE_<NAME>` authorities), so `@PreAuthorize("hasRole('ADMIN')")` can be used on endpoints.
-Errors follow RFC 9457 Problem Details (`application/problem+json`).
+(`ROLE_<NAME>` authorities). Errors follow RFC 9457 Problem Details (`application/problem+json`).
+
+### Roles
+
+Profiles `ADMIN` and `PLAYER` are created automatically on startup. New accounts get `PLAYER`.
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` to create the first administrator when no
+`ADMIN` user exists yet. Access rules live in `SecurityConfig`:
+
+| Resources | GET | POST / PUT / DELETE |
+|---|---|---|
+| `/users`, `/profiles`, `/routes` | ADMIN | ADMIN |
+| `/games`, `/assets`, `/quizzes`, `/questions`, `/options`, `/card-templates`, `/sudoku`, `/words` | any user | ADMIN |
+| `/play-sessions`, `/scores` | own records (ADMIN sees all) | see below |
+| other gameplay resources | any user | any user |
+
+### Play sessions and scores
+
+A play session is the single record of a user playing a game. The server sets the user
+(from the token), the game, the timestamps and the status; the client never sends a score.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/play-sessions` | Starts a session: `{"gameId": "<uuid>", "clientMeta": "<json>"}`. |
+| `POST` | `/play-sessions/{id}/finish` | Ends the session with `{"resultSummary": "<json>"}`; a score is computed server-side when the game has a `ScoreCalculator`. |
+| `POST` | `/play-sessions/{id}/abandon` | Marks the session as abandoned. |
+| `GET` | `/play-sessions`, `/play-sessions/{id}` | Own sessions, with their score. |
+| `GET` | `/scores`, `/scores/{id}` | Own scores. Scores are read-only through the API. |
+
+A finished or abandoned session cannot be reopened (`409`), and a session can hold at most one score.
 
 ## Diagrams
 
