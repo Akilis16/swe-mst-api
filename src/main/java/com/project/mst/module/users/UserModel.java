@@ -5,6 +5,9 @@ import com.project.mst.module.profiles.ProfileModel;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
@@ -30,12 +33,14 @@ public class UserModel extends Model {
     @Column(name = "email", unique = true, nullable = false)
     protected String email;
     
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(name = "password_hash")
     protected String password;
 
     @Column(name = "avatar_url")
     protected String avatar_url;
 
+    @JsonIgnoreProperties({"users", "routes"})
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_profile",

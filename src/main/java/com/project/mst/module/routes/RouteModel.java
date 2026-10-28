@@ -5,6 +5,8 @@ import com.project.mst.module.profiles.ProfileModel;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -31,6 +33,7 @@ public class RouteModel extends Model {
     @Column (name = "url", unique = true, nullable = false)
     protected String url;
 
+    @JsonIgnoreProperties({"users", "routes"})
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "route_profile",

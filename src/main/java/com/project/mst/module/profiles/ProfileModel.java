@@ -6,6 +6,8 @@ import com.project.mst.module.users.UserModel;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -26,9 +28,11 @@ public class ProfileModel extends Model {
     @Column(name = "name", unique = true, nullable = false)
     protected String name;
 
+    @JsonIgnoreProperties("profiles")
     @ManyToMany(mappedBy = "profiles", fetch = FetchType.LAZY)
     protected List<UserModel> users;
 
+    @JsonIgnoreProperties("profiles")
     @ManyToMany(mappedBy = "profiles", fetch = FetchType.LAZY)
     protected List<RouteModel> routes;
 }
