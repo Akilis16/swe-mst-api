@@ -34,7 +34,7 @@ public class JwtService {
             .expiresAt(now.plusSeconds(properties.expirationSeconds()))
             .subject(user.getId().toString())
             .claim("email", user.getEmail())
-            .claim("name", user.getName())
+            .claim("name", user.getDisplayName())
             .claim(SecurityConfig.ROLES_CLAIM, roles(user))
             .build();
 
@@ -46,15 +46,14 @@ public class JwtService {
         return properties.expirationSeconds();
     }
 
-    /** Nome do perfil normalizado como papel: "Administrador Geral" -> ADMINISTRADOR_GERAL. */
     public static List<String> roles(UserModel user) {
         if (user.getProfiles() == null) {
             return List.of();
         }
         return user.getProfiles().stream()
-            .map(ProfileModel::getName)
-            .filter(name -> name != null && !name.isBlank())
-            .map(name -> name.trim().toUpperCase(Locale.ROOT).replaceAll("\\s+", "_"))
+            .map(ProfileModel::getCode)
+            .filter(code -> code != null && !code.isBlank())
+            .map(code -> code.trim().toUpperCase(Locale.ROOT))
             .distinct()
             .toList();
     }

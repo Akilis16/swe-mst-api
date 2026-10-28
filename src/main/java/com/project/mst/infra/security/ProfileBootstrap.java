@@ -17,16 +17,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-public class RoleBootstrap implements ApplicationRunner {
+public class ProfileBootstrap implements ApplicationRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(RoleBootstrap.class);
+    private static final Logger log = LoggerFactory.getLogger(ProfileBootstrap.class);
 
     private final ProfileRepository profiles;
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final BootstrapProperties properties;
 
-    public RoleBootstrap(ProfileRepository profiles, UserRepository users,
+    public ProfileBootstrap(ProfileRepository profiles, UserRepository users,
             PasswordEncoder passwordEncoder, BootstrapProperties properties) {
         this.profiles = profiles;
         this.users = users;
@@ -54,7 +54,7 @@ public class RoleBootstrap implements ApplicationRunner {
         }
 
         UserModel user = new UserModel();
-        user.setName("admin");
+        user.setDisplayName("Administrador");
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(properties.adminPassword()));
         Set<ProfileModel> set = new LinkedHashSet<>();
@@ -64,12 +64,12 @@ public class RoleBootstrap implements ApplicationRunner {
         log.info("Primeiro administrador criado: {}", email);
     }
 
-    private ProfileModel ensureProfile(String name) {
-        return profiles.findByName(name).orElseGet(() -> {
-            ProfileModel profile = new ProfileModel();
-            profile.setName(name);
-            log.info("Perfil {} criado", name);
-            return profiles.save(profile);
+    private ProfileModel ensureProfile(String code) {
+        return profiles.findByCode(code).orElseGet(() -> {
+            ProfileModel role = new ProfileModel();
+            role.setCode(code);
+            log.info("Perfil {} criado", code);
+            return profiles.save(role);
         });
     }
 }

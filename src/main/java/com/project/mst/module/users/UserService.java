@@ -3,14 +3,20 @@ package com.project.mst.module.users;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
+import com.project.mst.infra.security.CurrentUser;
 import com.project.mst.infra.service.CrudService;
 import com.project.mst.module.profiles.ProfileModel;
 import com.project.mst.module.profiles.ProfileRepository;
+import com.project.mst.module.users.dto.Preferences;
+import com.project.mst.module.users.dto.UserResponse;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,19 +36,16 @@ public class UserService extends CrudService<UserModel> {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /** A senha nunca é gravada em texto puro, mesmo pelo CRUD de /users. */
     @Override
     @Transactional
     public UserModel create(UserModel entity) {
         normalize(entity);
         ensureEmailAvailable(entity.getEmail(), null);
-        ensureNameAvailable(entity.getName(), null);
         entity.setProfiles(resolveProfiles(entity.getProfiles()));
         entity.setPassword(hashIfPresent(entity.getPassword()));
         return super.create(entity);
     }
 
-    /** Senha ausente na atualização mantém o hash atual; senha presente é re-hasheada. */
     @Override
     @Transactional
     public UserModel update(UUID id, UserModel entity) {
@@ -50,8 +53,8 @@ public class UserService extends CrudService<UserModel> {
 
         normalize(entity);
         ensureEmailAvailable(entity.getEmail(), id);
-        ensureNameAvailable(entity.getName(), id);
         entity.setProfiles(resolveProfiles(entity.getProfiles()));
+        entity.setPreferences(current.getPreferences());
 
         String password = entity.getPassword();
         if (password == null || password.isBlank()) {
@@ -63,33 +66,36 @@ public class UserService extends CrudService<UserModel> {
         return super.update(id, entity);
     }
 
-    /** RN-D13: e-mail único, comparado já normalizado (o setter de UserModel normaliza). */
+    @Transactional(readOnly = true)
+    public UserResponse me() {
+        return UserResponse.from(currentUser());
+    }
+
+    @Transactional
+    public Preferences updatePreferences(Preferences patch) {
+        UserModel user = currentUser();
+        Preferences merged = Preferences.fromJson(user.getPreferences()).merge(patch);
+        user.setPreferences(merged.toJson());
+        users.save(user);
+        return merged;
+    }
+
+    @Transactional(readOnly = true)
+    public Preferences preferencesOf(UserModel user) {
+        return Preferences.fromJson(user.getPreferences());
+    }
+
     public void ensureEmailAvailable(String email, UUID currentUserId) {
         if (email == null) {
             return;
         }
         users.findByEmail(UserModel.normalizeEmail(email))
-            .filter(other -> !other.getId().equals(currentUserId))
+            .filter(other -> currentUserId == null || !currentUserId.equals(other.getId()))
             .ifPresent(other -> {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
             });
     }
 
-    public void ensureNameAvailable(String name, UUID currentUserId) {
-        if (name == null) {
-            return;
-        }
-        users.findByName(name)
-            .filter(other -> !other.getId().equals(currentUserId))
-            .ifPresent(other -> {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Nome de usuário já em uso");
-            });
-    }
-
-    /**
-     * RN-D01: cada perfil entra uma única vez no vínculo. Perfis repetidos na requisição
-     * são ignorados; perfil inexistente ou excluído é rejeitado.
-     */
     private Set<ProfileModel> resolveProfiles(Collection<ProfileModel> requested) {
         Set<ProfileModel> resolved = new LinkedHashSet<>();
         if (requested == null) {
@@ -97,24 +103,40 @@ public class UserService extends CrudService<UserModel> {
         }
 
         Set<UUID> seen = new HashSet<>();
-        for (ProfileModel profile : requested) {
-            if (profile == null || profile.getId() == null) {
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "Perfil sem id");
+        for (ProfileModel role : requested) {
+            ProfileModel found = findProfile(role);
+            if (seen.add(found.getId())) {
+                resolved.add(found);
             }
-            UUID profileId = profile.getId();
-            if (!seen.add(profileId)) {
-                continue;
-            }
-            resolved.add(profiles.findActiveById(profileId)
-                .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_CONTENT, "Perfil " + profileId + " não encontrado")));
         }
         return resolved;
     }
 
+    private ProfileModel findProfile(ProfileModel role) {
+        if (role != null && role.getId() != null) {
+            return profiles.findActiveById(role.getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT, "Perfil " + role.getId() + " não encontrado"));
+        }
+        if (role != null && role.getCode() != null && !role.getCode().isBlank()) {
+            String code = role.getCode().trim().toUpperCase(Locale.ROOT);
+            return profiles.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT, "Perfil " + code + " não encontrado"));
+        }
+        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "Perfil sem id nem código");
+    }
+
+    private UserModel currentUser() {
+        UUID id = CurrentUser.id()
+            .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Usuário não autenticado"));
+        return users.findActiveById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado"));
+    }
+
     private static void normalize(UserModel entity) {
-        if (entity.getName() != null) {
-            entity.setName(entity.getName().trim());
+        if (entity.getDisplayName() != null) {
+            entity.setDisplayName(entity.getDisplayName().trim());
         }
         entity.setEmail(entity.getEmail());
     }

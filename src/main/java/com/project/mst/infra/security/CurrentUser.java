@@ -40,7 +40,6 @@ public final class CurrentUser {
         return hasRole(Roles.ADMIN);
     }
 
-    /** O usuário autenticado é o dono do recurso ou é administrador. */
     public static boolean owns(UUID ownerId) {
         return isAdmin() || (ownerId != null && id().filter(ownerId::equals).isPresent());
     }

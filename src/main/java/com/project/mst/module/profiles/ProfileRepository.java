@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProfileRepository extends BaseRepository<ProfileModel> {
-    Optional<ProfileModel> findByName(String name);
+    Optional<ProfileModel> findByCode(String code);
 }

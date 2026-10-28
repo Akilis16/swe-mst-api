@@ -38,11 +38,11 @@ public class SecurityConfig {
     public static final String ROLES_CLAIM = "roles";
 
     private static final String[] ADMIN_ONLY = {
-        "/users/**", "/profiles/**", "/routes/**"
+        "/users/**", "/profiles/**"
     };
 
     private static final String[] CONTENT = {
-        "/games/**", "/assets/**", "/quizzes/**", "/questions/**", "/options/**",
+        "/games/**", "/quizzes/**", "/questions/**", "/options/**",
         "/card-templates/**", "/sudoku/**", "/words/**"
     };
 
@@ -58,6 +58,7 @@ public class SecurityConfig {
                 .requestMatchers(ADMIN_ONLY).hasRole(Roles.ADMIN)
                 .requestMatchers(HttpMethod.GET, CONTENT).authenticated()
                 .requestMatchers(CONTENT).hasRole(Roles.ADMIN)
+                .requestMatchers(HttpMethod.GET, "/play-sessions").hasRole(Roles.ADMIN)
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
