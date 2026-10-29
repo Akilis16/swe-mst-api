@@ -20,7 +20,7 @@ import org.springframework.security.authentication.AuthenticationCredentialsNotF
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.project.mst.infra.controller.ApiException;
 
 @Service
 public class UserService extends CrudService<UserModel> {
@@ -92,7 +92,7 @@ public class UserService extends CrudService<UserModel> {
         users.findByEmail(UserModel.normalizeEmail(email))
             .filter(other -> currentUserId == null || !currentUserId.equals(other.getId()))
             .ifPresent(other -> {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
+                throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_USED", "E-mail já cadastrado");
             });
     }
 
@@ -115,16 +115,15 @@ public class UserService extends CrudService<UserModel> {
     private ProfileModel findProfile(ProfileModel role) {
         if (role != null && role.getId() != null) {
             return profiles.findActiveById(role.getId())
-                .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_CONTENT, "Perfil " + role.getId() + " não encontrado"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "PROFILE_NOT_FOUND", "Perfil " + role.getId() + " não encontrado"));
         }
         if (role != null && role.getCode() != null && !role.getCode().isBlank()) {
             String code = role.getCode().trim().toUpperCase(Locale.ROOT);
             return profiles.findByCode(code)
-                .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_CONTENT, "Perfil " + code + " não encontrado"));
+                .orElseThrow(() -> new ApiException(
+                    HttpStatus.UNPROCESSABLE_CONTENT, "PROFILE_NOT_FOUND", "Perfil " + code + " não encontrado"));
         }
-        throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "Perfil sem id nem código");
+        throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "PROFILE_REFERENCE_INVALID", "Perfil sem id nem código");
     }
 
     private UserModel currentUser() {

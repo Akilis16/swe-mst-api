@@ -8,12 +8,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import java.util.UUID;
 
+import com.project.mst.infra.web.ApiPathPrefixConfig;
 import com.project.mst.module.games.GameController;
+import com.project.mst.module.hangman.WordController;
+import com.project.mst.module.hangman.WordService;
 import com.project.mst.module.games.GameModel;
 import com.project.mst.module.games.GameService;
 import com.project.mst.module.profiles.ProfileController;
@@ -32,8 +36,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-@WebMvcTest({GameController.class, UserController.class, ProfileController.class})
-@Import(SecurityConfig.class)
+@WebMvcTest({GameController.class, UserController.class, ProfileController.class, WordController.class})
+@Import({SecurityConfig.class, ProblemDetailsEntryPoint.class, ApiPathPrefixConfig.class})
 @TestPropertySource(properties = {
     "security.jwt.secret=chave-de-teste-com-pelo-menos-32-bytes-ok",
     "security.jwt.expiration-seconds=3600"
@@ -46,27 +50,30 @@ class SecurityRulesTest {
     @MockitoBean GameService gameService;
     @MockitoBean UserService userService;
     @MockitoBean ProfileService profileService;
+    @MockitoBean WordService wordService;
 
     @Test
     void semTokenRetorna401() throws Exception {
-        mvc.perform(get("/games")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/games"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     @Test
     void playerLeCatalogo() throws Exception {
         when(gameService.catalog(anyBoolean())).thenReturn(List.of());
 
-        mvc.perform(get("/games").with(player())).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/games").with(player())).andExpect(status().isOk());
     }
 
     @Test
     void playerNaoEscreveNemAtivaJogo() throws Exception {
-        mvc.perform(post("/games").with(player()).contentType(MediaType.APPLICATION_JSON).content(GAME_JSON))
+        mvc.perform(post("/api/v1/games").with(player()).contentType(MediaType.APPLICATION_JSON).content(GAME_JSON))
             .andExpect(status().isForbidden());
-        mvc.perform(patch("/games/" + UUID.randomUUID() + "/active").with(player())
+        mvc.perform(patch("/api/v1/games/" + UUID.randomUUID() + "/active").with(player())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
             .andExpect(status().isForbidden());
-        mvc.perform(delete("/games/" + UUID.randomUUID()).with(player()))
+        mvc.perform(delete("/api/v1/games/" + UUID.randomUUID()).with(player()))
             .andExpect(status().isForbidden());
     }
 
@@ -78,14 +85,17 @@ class SecurityRulesTest {
             return game;
         });
 
-        mvc.perform(post("/games").with(admin()).contentType(MediaType.APPLICATION_JSON).content(GAME_JSON))
+        mvc.perform(post("/api/v1/games").with(admin()).contentType(MediaType.APPLICATION_JSON).content(GAME_JSON))
             .andExpect(status().isCreated());
     }
 
     @Test
     void playerNaoAcessaUsuariosNemPapeis() throws Exception {
-        mvc.perform(get("/users").with(player())).andExpect(status().isForbidden());
-        mvc.perform(get("/profiles").with(player())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/users").with(player()))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        mvc.perform(get("/api/v1/profiles").with(player())).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/words").with(player())).andExpect(status().isForbidden());
     }
 
     @Test
@@ -93,8 +103,11 @@ class SecurityRulesTest {
         when(userService.findAll()).thenReturn(List.of());
         when(profileService.findAll()).thenReturn(List.of());
 
-        mvc.perform(get("/users").with(admin())).andExpect(status().isOk());
-        mvc.perform(get("/profiles").with(admin())).andExpect(status().isOk());
+        when(wordService.findAll()).thenReturn(List.of());
+
+        mvc.perform(get("/api/v1/users").with(admin())).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/profiles").with(admin())).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/words").with(admin())).andExpect(status().isOk());
     }
 
     private static RequestPostProcessor player() {

@@ -12,7 +12,9 @@ import java.util.UUID;
 
 import com.project.mst.infra.controller.ExceptionHandlerController;
 import com.project.mst.infra.security.JwtService;
+import com.project.mst.infra.security.ProblemDetailsEntryPoint;
 import com.project.mst.infra.security.SecurityConfig;
+import com.project.mst.infra.web.ApiPathPrefixConfig;
 import com.project.mst.module.auth.dto.LoginRequest;
 import com.project.mst.module.auth.dto.TokenResponse;
 import com.project.mst.module.users.MeController;
@@ -31,7 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest({AuthController.class, MeController.class})
-@Import({SecurityConfig.class, JwtService.class, ExceptionHandlerController.class})
+@Import({SecurityConfig.class, JwtService.class, ExceptionHandlerController.class, ProblemDetailsEntryPoint.class, ApiPathPrefixConfig.class})
 @TestPropertySource(properties = {
     "security.jwt.secret=chave-de-teste-com-pelo-menos-32-bytes-ok",
     "security.jwt.expiration-seconds=3600"
@@ -45,12 +47,14 @@ class AuthControllerTest {
 
     @Test
     void endpointProtegidoSemTokenRetorna401() throws Exception {
-        mvc.perform(get("/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/me"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
     }
 
     @Test
     void tokenAdulteradoRetorna401() throws Exception {
-        mvc.perform(get("/me").header("Authorization", "Bearer " + jwtService.generate(user()) + "x"))
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + jwtService.generate(user()) + "x"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -59,7 +63,7 @@ class AuthControllerTest {
         UserModel user = user();
         when(userService.me()).thenReturn(UserResponse.from(user));
 
-        mvc.perform(get("/me").header("Authorization", "Bearer " + jwtService.generate(user)))
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + jwtService.generate(user)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.email").value("ana@example.com"))
             .andExpect(jsonPath("$.displayName").value("Ana"))
@@ -73,7 +77,7 @@ class AuthControllerTest {
         when(authService.login(any(LoginRequest.class)))
             .thenReturn(TokenResponse.bearer("abc", 3600, UserResponse.from(user())));
 
-        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"ana@example.com\",\"password\":\"segredo123\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.accessToken").value("abc"))
@@ -84,20 +88,20 @@ class AuthControllerTest {
     void loginComCredenciaisInvalidasRetorna401() throws Exception {
         when(authService.login(any(LoginRequest.class))).thenThrow(new BadCredentialsException("Credenciais inválidas"));
 
-        mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"ana@example.com\",\"password\":\"errada\"}"))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.status").value(401));
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
     }
 
     @Test
     void registroComDadosInvalidosRetorna400ComCampos() throws Exception {
-        mvc.perform(post("/auth/register").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"displayName\":\"\",\"email\":\"nao-e-email\",\"password\":\"123\"}"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.errors.displayName").exists())
-            .andExpect(jsonPath("$.errors.email").exists())
-            .andExpect(jsonPath("$.errors.password").exists());
+            .andExpect(status().isUnprocessableContent())
+            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.errors[*].field").value(org.hamcrest.Matchers.hasItems("displayName", "email", "password")));
     }
 
     private static UserModel user() {

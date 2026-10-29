@@ -14,7 +14,7 @@ import com.project.mst.module.scores.dto.ScoreResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.project.mst.infra.controller.ApiException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -44,7 +44,7 @@ public class ScoreService extends CrudService<ScoreModel> {
             throw new IllegalStateException("Sessão ainda em andamento não pontua");
         }
         if (scores.findActiveByPlaySessionId(session.getId()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Sessão já pontuada");
+            throw new ApiException(HttpStatus.CONFLICT, "SESSION_ALREADY_SCORED", "Sessão já pontuada");
         }
 
         ScoreCalculator calculator = calculators.get(session.getGame().getSlug());

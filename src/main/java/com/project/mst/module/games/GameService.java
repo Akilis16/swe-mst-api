@@ -11,7 +11,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.project.mst.infra.controller.ApiException;
 
 @Service
 public class GameService extends CrudService<GameModel> {
@@ -80,7 +80,7 @@ public class GameService extends CrudService<GameModel> {
         games.findBySlug(slug)
             .filter(other -> currentId == null || !currentId.equals(other.getId()))
             .ifPresent(other -> {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Slug já em uso");
+                throw new ApiException(HttpStatus.CONFLICT, "GAME_SLUG_IN_USE", "Slug já em uso");
             });
     }
 }

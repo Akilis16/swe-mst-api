@@ -22,7 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.project.mst.infra.controller.ApiException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -71,7 +71,7 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
             return toResponse(session);
         }
         if (!session.isOpen()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Sessão abandonada não pode ser encerrada");
+            throw new ApiException(HttpStatus.CONFLICT, "SESSION_ABANDONED", "Sessão abandonada não pode ser encerrada");
         }
 
         session.setStatus(PlaySessionStatus.FINISHED);
@@ -86,7 +86,7 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
     public PlaySessionResponse abandon(UUID id) {
         PlaySessionModel session = ownedSession(id);
         if (!session.isOpen()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Sessão já encerrada");
+            throw new ApiException(HttpStatus.CONFLICT, "SESSION_ALREADY_ENDED", "Sessão já encerrada");
         }
 
         session.setStatus(PlaySessionStatus.ABANDONED);
@@ -126,7 +126,7 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
     private PlaySessionModel ownedSession(UUID id) {
         PlaySessionModel session = findById(id);
         if (!CurrentUser.owns(session.getUser().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Sessão de outro usuário");
+            throw new ApiException(HttpStatus.FORBIDDEN, "SESSION_FORBIDDEN", "Sessão de outro usuário");
         }
         return session;
     }
@@ -145,7 +145,7 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
             JSON.readTree(value);
             return value;
         } catch (JacksonException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " precisa ser um JSON válido");
+            throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_JSON", field + " precisa ser um JSON válido");
         }
     }
 

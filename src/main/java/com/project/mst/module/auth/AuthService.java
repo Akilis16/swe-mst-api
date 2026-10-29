@@ -17,7 +17,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+import com.project.mst.infra.controller.ApiException;
 
 @Service
 public class AuthService {
@@ -42,7 +42,7 @@ public class AuthService {
         String email = UserModel.normalizeEmail(request.email());
 
         if (users.findByEmail(email).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_USED", "E-mail já cadastrado");
         }
 
         UserModel user = new UserModel();

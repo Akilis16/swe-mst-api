@@ -1,9 +1,20 @@
 spring:
   application:
     name: mst
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
   mvc:
     problemdetails:
       enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
 
 security:
   jwt:
