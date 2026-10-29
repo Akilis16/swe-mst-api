@@ -1,19 +1,19 @@
 package com.project.mst.module.playsessions;
 
-import java.util.List;
 import java.util.UUID;
 
-import com.project.mst.module.playsessions.dto.FinishSessionRequest;
 import com.project.mst.module.playsessions.dto.PlaySessionResponse;
 import com.project.mst.module.playsessions.dto.StartSessionRequest;
 
 import jakarta.validation.Valid;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,8 +28,11 @@ public class PlaySessionController {
     }
 
     @GetMapping
-    public List<PlaySessionResponse> findAll() {
-        return service.findVisible();
+    public PagedModel<PlaySessionResponse> findAll(
+            @RequestParam(required = false) String game,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return new PagedModel<>(service.pageAll(game, Paging.of(page, size)));
     }
 
     @GetMapping("/{id}")
@@ -44,8 +47,8 @@ public class PlaySessionController {
     }
 
     @PostMapping("/{id}/finish")
-    public PlaySessionResponse finish(@PathVariable UUID id, @RequestBody(required = false) FinishSessionRequest request) {
-        return service.finish(id, request);
+    public PlaySessionResponse finish(@PathVariable UUID id) {
+        return service.finish(id);
     }
 
     @PostMapping("/{id}/abandon")

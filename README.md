@@ -42,9 +42,10 @@ Tokens are signed with HMAC-SHA256 using `JWT_SECRET` (at least 32 characters) a
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/auth/register` | public | Creates a user (`name`, `email`, `password` ≥ 8 chars, optional `avatarUrl`) and returns a token. |
+| `POST` | `/auth/register` | public | Creates a user (`displayName`, `email`, `password` ≥ 8 chars) with role `PLAYER` and returns a token. |
 | `POST` | `/auth/login` | public | Returns a token for valid `email` + `password`; `401` otherwise. |
-| `GET` | `/auth/me` | bearer | Returns the authenticated user. |
+| `GET` | `/me` | bearer | The authenticated user: `id`, `displayName`, `email`, `roles`, `preferences`. |
+| `PATCH` | `/me/preferences` | bearer | Merges `{timed, highContrast, largeFont, reduceMotion}`; omitted fields keep their value. |
 
 ``` bash
 curl -X POST http://localhost:8080/auth/login \
@@ -55,21 +56,32 @@ curl -X POST http://localhost:8080/auth/login \
 curl http://localhost:8080/games -H "Authorization: Bearer <jwt>"
 ```
 
-The token carries the user id as `sub` and the user's profile names as `roles`
-(`ROLE_<NAME>` authorities). Errors follow RFC 9457 Problem Details (`application/problem+json`).
+The token carries the user id as `sub` and the user's profile codes as `roles`
+(`ROLE_<CODE>` authorities). Errors follow RFC 9457 Problem Details (`application/problem+json`).
 
 ### Roles
 
 Profiles `ADMIN` and `PLAYER` are created automatically on startup. New accounts get `PLAYER`.
 Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` to create the first administrator when no
-`ADMIN` user exists yet. Access rules live in `SecurityConfig`:
+`ADMIN` user exists yet. Admins assign profiles through `/users` with `"profiles": [{"code": "ADMIN"}]`.
+Access rules live in `SecurityConfig`:
 
-| Resources | GET | POST / PUT / DELETE |
+| Resources | GET | POST / PUT / PATCH / DELETE |
 |---|---|---|
-| `/users`, `/profiles`, `/routes` | ADMIN | ADMIN |
-| `/games`, `/assets`, `/quizzes`, `/questions`, `/options`, `/card-templates`, `/sudoku`, `/words` | any user | ADMIN |
-| `/play-sessions`, `/scores` | own records (ADMIN sees all) | see below |
+| `/users`, `/profiles` | ADMIN | ADMIN |
+| `/games`, `/quizzes`, `/questions`, `/options`, `/card-templates`, `/sudoku`, `/words` | any user | ADMIN |
+| `/play-sessions` (list) | ADMIN | — |
+| `/play-sessions/{id}`, `/me/**` | owner (ADMIN sees all) | owner |
 | other gameplay resources | any user | any user |
+
+### Catalog
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/games` | Active games (`slug`, `title`, `description`, `imagePath`). ADMIN may pass `?includeInactive=true`. |
+| `GET` | `/games/{slug}` | One game; inactive games are `404` for players. |
+| `POST` / `PUT` / `DELETE` | `/games`, `/games/{id}` | ADMIN. The `slug` is unique and cannot change after creation. |
+| `PATCH` | `/games/{id}/active` | ADMIN. `{"active": false}` hides the game from the catalog and blocks new sessions. |
 
 ### Play sessions and scores
 
@@ -78,13 +90,14 @@ A play session is the single record of a user playing a game. The server sets th
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/play-sessions` | Starts a session: `{"gameId": "<uuid>", "clientMeta": "<json>"}`. |
-| `POST` | `/play-sessions/{id}/finish` | Ends the session with `{"resultSummary": "<json>"}`; a score is computed server-side when the game has a `ScoreCalculator`. |
-| `POST` | `/play-sessions/{id}/abandon` | Marks the session as abandoned. |
-| `GET` | `/play-sessions`, `/play-sessions/{id}` | Own sessions, with their score. |
-| `GET` | `/scores`, `/scores/{id}` | Own scores. Scores are read-only through the API. |
+| `POST` | `/play-sessions` | Starts a session: `{"gameSlug": "velha", "difficulty": "EASY", "timed": true, "clientMeta": "<json>"}`. `difficulty` and `clientMeta` are optional; `timed` defaults to the user's preference. |
+| `POST` | `/play-sessions/{id}/finish` | Ends the session; a score is computed server-side when the game has a `ScoreCalculator`. Repeating the call returns the same state. |
+| `POST` | `/play-sessions/{id}/abandon` | Marks the session as abandoned; `409` if already ended. |
+| `GET` | `/me/play-sessions?game=&page=&size=` | Own sessions, newest first, each with its `score` (`value`, `breakdown`). |
+| `GET` | `/play-sessions/{id}` | One session, owner or ADMIN. |
+| `GET` | `/play-sessions?game=&page=&size=` | All sessions, ADMIN only. |
 
-A finished or abandoned session cannot be reopened (`409`), and a session can hold at most one score.
+A session holds at most one score and scores are never written through the API.
 
 ## Diagrams
 

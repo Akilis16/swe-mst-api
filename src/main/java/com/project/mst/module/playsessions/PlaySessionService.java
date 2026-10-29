@@ -1,23 +1,25 @@
 package com.project.mst.module.playsessions;
 
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 import com.project.mst.infra.security.CurrentUser;
 import com.project.mst.infra.service.CrudService;
 import com.project.mst.module.games.GameModel;
-import com.project.mst.module.games.GameRepository;
-import com.project.mst.module.playsessions.dto.FinishSessionRequest;
+import com.project.mst.module.games.GameService;
 import com.project.mst.module.playsessions.dto.PlaySessionResponse;
 import com.project.mst.module.playsessions.dto.StartSessionRequest;
 import com.project.mst.module.scores.ScoreService;
 import com.project.mst.module.scores.dto.ScoreResponse;
 import com.project.mst.module.users.UserModel;
 import com.project.mst.module.users.UserRepository;
+import com.project.mst.module.users.dto.Preferences;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,15 +30,15 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class PlaySessionService extends CrudService<PlaySessionModel> {
 
-    private final PlaySessionRepository sessions;
-    private final UserRepository users;
-    private final GameRepository games;
-    private final ScoreService scores;
-
     private static final ObjectMapper JSON = JsonMapper.builder().build();
 
-    public PlaySessionService(PlaySessionRepository sessions, UserRepository users, GameRepository games,
-            ScoreService scores) {
+    private final PlaySessionRepository sessions;
+    private final UserRepository users;
+    private final GameService games;
+    private final ScoreService scores;
+
+    public PlaySessionService(PlaySessionRepository sessions, UserRepository users,
+            GameService games, ScoreService scores) {
         super(sessions);
         this.sessions = sessions;
         this.users = users;
@@ -46,29 +48,34 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
 
     @Transactional
     public PlaySessionResponse start(StartSessionRequest request) {
-        UserModel user = users.findActiveById(currentUserId())
-            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado"));
-        GameModel game = games.findActiveById(request.gameId())
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_CONTENT, "Jogo " + request.gameId() + " não encontrado"));
+        UserModel user = currentUser();
+        GameModel game = games.requireEnabledBySlug(request.gameSlug());
 
         PlaySessionModel session = new PlaySessionModel();
         session.setUser(user);
         session.setGame(game);
         session.setStatus(PlaySessionStatus.IN_PROGRESS);
-        session.setStarted_at(new Date());
-        session.setClient_meta(validJsonOrNull(request.clientMeta(), "clientMeta"));
+        session.setDifficulty(request.difficulty());
+        session.setTimed(request.timed() != null ? request.timed() : Preferences.fromJson(user.getPreferences()).timed());
+        session.setStartedAt(new Date());
+        session.setClientMeta(validJsonOrNull(request.clientMeta(), "clientMeta"));
 
         return PlaySessionResponse.from(create(session), null);
     }
 
     @Transactional
-    public PlaySessionResponse finish(UUID id, FinishSessionRequest request) {
-        PlaySessionModel session = ownedOpenSession(id);
+    public PlaySessionResponse finish(UUID id) {
+        PlaySessionModel session = ownedSession(id);
+
+        if (session.getStatus() == PlaySessionStatus.FINISHED) {
+            return toResponse(session);
+        }
+        if (!session.isOpen()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Sessão abandonada não pode ser encerrada");
+        }
 
         session.setStatus(PlaySessionStatus.FINISHED);
-        session.setEnded_at(now(session));
-        session.setResult_summary(validJsonOrNull(request == null ? null : request.resultSummary(), "resultSummary"));
+        session.setEndedAt(now(session));
         session = sessions.save(session);
 
         ScoreResponse score = scores.scoreFor(session).map(ScoreResponse::from).orElse(null);
@@ -77,20 +84,34 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
 
     @Transactional
     public PlaySessionResponse abandon(UUID id) {
-        PlaySessionModel session = ownedOpenSession(id);
+        PlaySessionModel session = ownedSession(id);
+        if (!session.isOpen()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Sessão já encerrada");
+        }
 
         session.setStatus(PlaySessionStatus.ABANDONED);
-        session.setEnded_at(now(session));
+        session.setEndedAt(now(session));
 
         return PlaySessionResponse.from(sessions.save(session), null);
     }
 
     @Transactional(readOnly = true)
-    public List<PlaySessionResponse> findVisible() {
-        List<PlaySessionModel> result = CurrentUser.isAdmin()
-            ? sessions.findAllActive()
-            : sessions.findAllActiveByUserId(currentUserId());
-        return result.stream().map(this::toResponse).toList();
+    public Page<PlaySessionResponse> pageForCurrentUser(String gameSlug, Pageable pageable) {
+        UUID userId = currentUserId();
+        String slug = GameModel.normalizeSlug(gameSlug);
+        Page<PlaySessionModel> page = slug == null || slug.isBlank()
+            ? sessions.findPageByUserId(userId, pageable)
+            : sessions.findPageByUserIdAndGameSlug(userId, slug, pageable);
+        return page.map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PlaySessionResponse> pageAll(String gameSlug, Pageable pageable) {
+        String slug = GameModel.normalizeSlug(gameSlug);
+        Page<PlaySessionModel> page = slug == null || slug.isBlank()
+            ? sessions.findPageAll(pageable)
+            : sessions.findPageByGameSlug(slug, pageable);
+        return page.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -110,21 +131,13 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
         return session;
     }
 
-    private PlaySessionModel ownedOpenSession(UUID id) {
-        PlaySessionModel session = ownedSession(id);
-        if (!session.isOpen()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Sessão já encerrada");
-        }
-        return session;
-    }
-
     private static Date now(PlaySessionModel session) {
         Date now = new Date();
-        Date started = session.getStarted_at();
+        Date started = session.getStartedAt();
         return (started != null && now.before(started)) ? started : now;
     }
 
-    private String validJsonOrNull(String value, String field) {
+    private static String validJsonOrNull(String value, String field) {
         if (value == null || value.isBlank()) {
             return null;
         }
@@ -136,8 +149,13 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
         }
     }
 
+    private UserModel currentUser() {
+        return users.findActiveById(currentUserId())
+            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado"));
+    }
+
     private static UUID currentUserId() {
         return CurrentUser.id()
-            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não identificado"));
+            .orElseThrow(() -> new AuthenticationCredentialsNotFoundException("Usuário não autenticado"));
     }
 }

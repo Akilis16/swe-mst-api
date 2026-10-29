@@ -7,19 +7,21 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import com.project.mst.infra.security.CurrentUser;
 import com.project.mst.infra.service.CrudService;
 import com.project.mst.module.playsessions.PlaySessionModel;
 import com.project.mst.module.scores.dto.ScoreResponse;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class ScoreService extends CrudService<ScoreModel> {
+
+    private static final ObjectMapper JSON = JsonMapper.builder().build();
 
     private final ScoreRepository scores;
     private final Map<String, ScoreCalculator> calculators;
@@ -29,24 +31,6 @@ public class ScoreService extends CrudService<ScoreModel> {
         this.scores = scores;
         this.calculators = calculators.stream()
             .collect(Collectors.toUnmodifiableMap(ScoreCalculator::gameSlug, Function.identity()));
-    }
-
-    /** Lista as próprias pontuações; ADMIN vê todas. */
-    @Transactional(readOnly = true)
-    public List<ScoreResponse> findVisible() {
-        List<ScoreModel> result = CurrentUser.isAdmin()
-            ? scores.findAllActive()
-            : scores.findAllActiveByUserId(currentUserId());
-        return result.stream().map(ScoreResponse::from).toList();
-    }
-
-    @Transactional(readOnly = true)
-    public ScoreResponse findVisibleById(UUID id) {
-        ScoreModel score = findById(id);
-        if (!CurrentUser.owns(score.getUser().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pontuação de outro usuário");
-        }
-        return ScoreResponse.from(score);
     }
 
     @Transactional(readOnly = true)
@@ -68,16 +52,12 @@ public class ScoreService extends CrudService<ScoreModel> {
             return Optional.empty();
         }
 
+        ScoreResult result = calculator.calculate(session);
         ScoreModel score = new ScoreModel();
-        score.setUser(session.getUser());
-        score.setGame(session.getGame());
-        score.setPlay_session(session);
-        score.setScore_value(calculator.calculate(session));
+        score.setPlaySession(session);
+        score.setValue(result.value());
+        score.setBreakdown(result.breakdown() == null || result.breakdown().isEmpty()
+            ? null : JSON.writeValueAsString(result.breakdown()));
         return Optional.of(create(score));
-    }
-
-    private static UUID currentUserId() {
-        return CurrentUser.id()
-            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não identificado"));
     }
 }

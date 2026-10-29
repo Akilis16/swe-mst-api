@@ -1,8 +1,8 @@
 package com.project.mst.module.playsessions.dto;
 
-import java.util.UUID;
+import com.project.mst.module.playsessions.Difficulty;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
-public record StartSessionRequest(@NotNull UUID gameId, String clientMeta) {
+public record StartSessionRequest(@NotBlank String gameSlug, Difficulty difficulty, Boolean timed, String clientMeta) {
 }

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
+import com.project.mst.module.playsessions.Difficulty;
 import com.project.mst.module.playsessions.PlaySessionModel;
 import com.project.mst.module.playsessions.PlaySessionStatus;
 import com.project.mst.module.scores.dto.ScoreResponse;
@@ -14,10 +15,11 @@ public record PlaySessionResponse(
     UUID gameId,
     String gameSlug,
     PlaySessionStatus status,
+    Difficulty difficulty,
+    boolean timed,
     Instant startedAt,
     Instant endedAt,
     String clientMeta,
-    String resultSummary,
     ScoreResponse score
 ) {
 
@@ -29,10 +31,11 @@ public record PlaySessionResponse(
             session.getGame().getSlug(),
             session.getStatus() != null ? session.getStatus()
                 : (session.isOpen() ? PlaySessionStatus.IN_PROGRESS : PlaySessionStatus.FINISHED),
-            toInstant(session.getStarted_at()),
-            toInstant(session.getEnded_at()),
-            session.getClient_meta(),
-            session.getResult_summary(),
+            session.getDifficulty(),
+            session.getTimed() == null || session.getTimed(),
+            toInstant(session.getStartedAt()),
+            toInstant(session.getEndedAt()),
+            session.getClientMeta(),
             score);
     }
 

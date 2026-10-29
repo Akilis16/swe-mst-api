@@ -6,5 +6,5 @@ public interface ScoreCalculator {
 
     String gameSlug();
 
-    int calculate(PlaySessionModel session);
+    ScoreResult calculate(PlaySessionModel session);
 }
