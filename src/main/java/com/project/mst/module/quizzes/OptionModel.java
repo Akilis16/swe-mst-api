@@ -8,25 +8,29 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Table(name="option")
-@Entity(name="option")
+@Table(name = "option")
+@Entity(name = "option")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class OptionModel extends Model {
+
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "question_id", nullable = false)
     protected QuestionModel question;
 
+    @NotBlank
     @Column(name = "text", columnDefinition = "text", nullable = false)
     protected String text;
 
+    @NotNull
     @Column(name = "is_correct", nullable = false)
-    protected Boolean is_correct;
+    protected Boolean isCorrect = false;
 }

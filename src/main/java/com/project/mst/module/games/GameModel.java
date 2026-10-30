@@ -39,7 +39,7 @@ public class GameModel extends Model {
     @Column(name = "image_path", length = 500)
     protected String imagePath;
 
-    @Column(name = "active", nullable = false, columnDefinition = "boolean default true")
+    @Column(name = "active", nullable = false)
     protected boolean active = true;
 
     public void setSlug(String slug) {

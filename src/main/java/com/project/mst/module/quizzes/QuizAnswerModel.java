@@ -2,24 +2,25 @@ package com.project.mst.module.quizzes;
 
 import com.project.mst.infra.database.model.Model;
 
+import java.util.Date;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Table(name="quiz_answer")
-@Entity(name="quiz_answer")
+@Table(name = "quiz_answer")
+@Entity(name = "quiz_answer")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class QuizAnswerModel extends Model {
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "attempt_id", nullable = false)
     protected QuizAttemptModel attempt;
@@ -32,12 +33,9 @@ public class QuizAnswerModel extends Model {
     @JoinColumn(name = "option_id")
     protected OptionModel option;
 
-    @Column(name = "free_text_answer", columnDefinition = "text")
-    protected String free_text_answer;
+    @Column(name = "correct", nullable = false)
+    protected boolean correct;
 
-    @Column(name = "correct")
-    protected Boolean correct;
-
-    @Column(name = "time_taken_ms")
-    protected Integer time_taken_ms;
+    @Column(name = "answered_at", nullable = false)
+    protected Date answeredAt;
 }

@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/words")
+@RequestMapping("/admin/words")
 public class WordController extends CrudController<WordModel> {
 
     public WordController(WordService service) {

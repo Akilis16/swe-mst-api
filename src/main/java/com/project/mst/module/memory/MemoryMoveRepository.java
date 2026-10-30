@@ -5,4 +5,5 @@ import com.project.mst.infra.database.repository.BaseRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface MemoryMoveRepository extends BaseRepository<MemoryMoveModel> {}
+public interface MemoryMoveRepository extends BaseRepository<MemoryMoveModel> {
+}

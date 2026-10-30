@@ -9,28 +9,30 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
-@Table(name="quiz")
-@Entity(name="quiz")
+@Table(name = "quiz")
+@Entity(name = "quiz")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class QuizModel extends Model {
+
+    @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "game_id", nullable = false)
     protected GameModel game;
 
-    @Column(name = "title", nullable = false)
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "title", nullable = false, length = 100)
     protected String title;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "settings", columnDefinition = "jsonb")
-    protected String settings;
+    @Column(name = "active", nullable = false)
+    protected boolean active = true;
 }

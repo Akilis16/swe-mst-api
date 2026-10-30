@@ -1,8 +1,9 @@
-package com.project.mst.module.sudoku;
+package com.project.mst.module.memory;
 
 import com.project.mst.infra.database.repository.BaseRepository;
 
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface SudokuRepository extends BaseRepository<SudokuModel> {}
+public interface CardThemeRepository extends BaseRepository<CardThemeModel> {
+}

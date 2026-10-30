@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/options")
+@RequestMapping("/admin/options")
 public class OptionController extends CrudController<OptionModel> {
 
     public OptionController(OptionService service) {

@@ -8,25 +8,24 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Table(name="guess")
-@Entity(name="guess")
+@Table(name = "hangman_guess")
+@Entity(name = "hangman_guess")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-public class GuessModel extends Model {
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "session_id", nullable = false)
-    protected HangmanSessionModel session;
+public class HangmanGuessModel extends Model {
 
-    @Column(name = "letter", length = 1, nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "round_id", nullable = false)
+    protected HangmanRoundModel round;
+
+    @Column(name = "letter", nullable = false, length = 1)
     protected String letter;
 
-    @Column(name = "correct")
-    protected Boolean correct;
+    @Column(name = "correct", nullable = false)
+    protected boolean correct;
 }

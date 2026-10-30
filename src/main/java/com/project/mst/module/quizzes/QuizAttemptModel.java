@@ -1,48 +1,34 @@
 package com.project.mst.module.quizzes;
 
 import com.project.mst.infra.database.model.Model;
-import com.project.mst.module.users.UserModel;
-
-import java.util.Date;
+import com.project.mst.module.playsessions.PlaySessionModel;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
-@Table(name="quiz_attempt")
-@Entity(name="quiz_attempt")
+@Table(name = "quiz_attempt")
+@Entity(name = "quiz_attempt")
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 public class QuizAttemptModel extends Model {
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    protected UserModel user;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "play_session_id", nullable = false, unique = true)
+    protected PlaySessionModel playSession;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "quiz_id", nullable = false)
     protected QuizModel quiz;
 
-    @Column(name = "started_at")
-    protected Date started_at;
-
-    @Column(name = "finished_at")
-    protected Date finished_at;
-
-    @Column(name = "score")
-    protected Integer score;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "metadata", columnDefinition = "jsonb")
-    protected String metadata;
+    @Column(name = "correct_count", nullable = false)
+    protected Integer correctCount = 0;
 }

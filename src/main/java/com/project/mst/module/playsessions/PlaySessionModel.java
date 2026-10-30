@@ -37,17 +37,17 @@ public class PlaySessionModel extends Model {
     protected GameModel game;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20)
+    @Column(name = "status", nullable = false, length = 20)
     protected PlaySessionStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "difficulty", length = 20)
     protected Difficulty difficulty;
 
-    @Column(name = "timed", columnDefinition = "boolean default true")
+    @Column(name = "timed", nullable = false)
     protected Boolean timed;
 
-    @Column(name = "started_at")
+    @Column(name = "started_at", nullable = false)
     protected Date startedAt;
 
     @Column(name = "ended_at")
@@ -58,7 +58,7 @@ public class PlaySessionModel extends Model {
     protected String clientMeta;
 
     @Version
-    @Column(name = "version", nullable = false, columnDefinition = "integer default 0 not null")
+    @Column(name = "version", nullable = false)
     protected Integer version;
 
     public boolean isOpen() {

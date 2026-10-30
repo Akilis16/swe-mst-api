@@ -1,8 +1,9 @@
-package com.project.mst.module.hangman;
+package com.project.mst.module.sudoku;
 
 import com.project.mst.infra.database.repository.BaseRepository;
 
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface GuessRepository extends BaseRepository<GuessModel> {}
+public interface SudokuPuzzleRepository extends BaseRepository<SudokuPuzzleModel> {
+}

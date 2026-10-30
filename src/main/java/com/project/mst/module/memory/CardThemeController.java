@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/memory-moves")
-public class MemoryMoveController extends CrudController<MemoryMoveModel> {
+@RequestMapping("/admin/card-themes")
+public class CardThemeController extends CrudController<CardThemeModel> {
 
-    public MemoryMoveController(MemoryMoveService service) {
+    public CardThemeController(CardThemeService service) {
         super(service);
     }
 }

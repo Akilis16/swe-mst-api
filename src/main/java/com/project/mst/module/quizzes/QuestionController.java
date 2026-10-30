@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/questions")
+@RequestMapping("/admin/questions")
 public class QuestionController extends CrudController<QuestionModel> {
 
     public QuestionController(QuestionService service) {

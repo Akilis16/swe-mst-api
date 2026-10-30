@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/card-templates")
+@RequestMapping("/admin/card-templates")
 public class CardTemplateController extends CrudController<CardTemplateModel> {
 
     public CardTemplateController(CardTemplateService service) {

@@ -5,9 +5,9 @@ import com.project.mst.infra.service.CrudService;
 import org.springframework.stereotype.Service;
 
 @Service
-public class MemoryMoveService extends CrudService<MemoryMoveModel> {
+public class CardThemeService extends CrudService<CardThemeModel> {
 
-    public MemoryMoveService(MemoryMoveRepository repository) {
+    public CardThemeService(CardThemeRepository repository) {
         super(repository);
     }
 }

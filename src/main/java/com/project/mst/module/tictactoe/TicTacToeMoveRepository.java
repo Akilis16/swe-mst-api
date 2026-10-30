@@ -5,4 +5,5 @@ import com.project.mst.infra.database.repository.BaseRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface TicTacToeMoveRepository extends BaseRepository<TicTacToeMoveModel> {}
+public interface TicTacToeMoveRepository extends BaseRepository<TicTacToeMoveModel> {
+}
