@@ -48,19 +48,41 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
 
     @Transactional
     public PlaySessionResponse start(StartSessionRequest request) {
+        PlaySessionModel session = open(request.gameSlug(), request.difficulty(), request.timed(),
+            validJsonOrNull(request.clientMeta(), "clientMeta"));
+        return PlaySessionResponse.from(session, null);
+    }
+
+    @Transactional
+    public PlaySessionModel open(String gameSlug, Difficulty difficulty, Boolean timed) {
+        return open(gameSlug, difficulty, timed, null);
+    }
+
+    private PlaySessionModel open(String gameSlug, Difficulty difficulty, Boolean timed, String clientMeta) {
         UserModel user = currentUser();
-        GameModel game = games.requireEnabledBySlug(request.gameSlug());
+        GameModel game = games.requireEnabledBySlug(gameSlug);
 
         PlaySessionModel session = new PlaySessionModel();
         session.setUser(user);
         session.setGame(game);
         session.setStatus(PlaySessionStatus.IN_PROGRESS);
-        session.setDifficulty(request.difficulty());
-        session.setTimed(request.timed() != null ? request.timed() : Preferences.fromJson(user.getPreferences()).timed());
+        session.setDifficulty(difficulty);
+        session.setTimed(timed != null ? timed : Preferences.fromJson(user.getPreferences()).timed());
         session.setStartedAt(new Date());
-        session.setClientMeta(validJsonOrNull(request.clientMeta(), "clientMeta"));
+        session.setClientMeta(clientMeta);
 
-        return PlaySessionResponse.from(create(session), null);
+        return create(session);
+    }
+
+    public void requireOwner(PlaySessionModel session) {
+        if (!CurrentUser.owns(session.getUser().getId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "SESSION_FORBIDDEN", "Sessão de outro usuário");
+        }
+    }
+
+    public static long elapsedSeconds(PlaySessionModel session) {
+        Date end = session.getEndedAt() != null ? session.getEndedAt() : new Date();
+        return Math.max(0, (end.getTime() - session.getStartedAt().getTime()) / 1000);
     }
 
     @Transactional
@@ -125,9 +147,7 @@ public class PlaySessionService extends CrudService<PlaySessionModel> {
 
     private PlaySessionModel ownedSession(UUID id) {
         PlaySessionModel session = findById(id);
-        if (!CurrentUser.owns(session.getUser().getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "SESSION_FORBIDDEN", "Sessão de outro usuário");
-        }
+        requireOwner(session);
         return session;
     }
 

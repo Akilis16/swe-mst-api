@@ -194,9 +194,6 @@ class PlaySessionServiceTest {
 
     @Test
     void clientMetaPrecisaSerJsonValido() {
-        when(users.findActiveById(userId)).thenReturn(Optional.of(user));
-        when(games.requireEnabledBySlug("velha")).thenReturn(game);
-
         assertThatThrownBy(() -> service.start(new StartSessionRequest("velha", null, true, "{nao-e-json")))
             .isInstanceOf(ResponseStatusException.class)
             .extracting(e -> ((ResponseStatusException) e).getStatusCode())

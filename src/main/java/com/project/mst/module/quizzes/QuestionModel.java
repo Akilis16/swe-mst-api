@@ -35,6 +35,9 @@ public class QuestionModel extends Model {
     @Column(name = "text", columnDefinition = "text", nullable = false)
     protected String text;
 
+    @Column(name = "position", nullable = false)
+    protected Integer position = 0;
+
     @Column(name = "active", nullable = false)
     protected boolean active = true;
 }

@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Table(name = "memory_round")
 @Entity(name = "memory_round")
@@ -34,4 +36,8 @@ public class MemoryRoundModel extends Model {
 
     @Column(name = "errors", nullable = false)
     protected Integer errors = 0;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "layout", columnDefinition = "jsonb", nullable = false)
+    protected String layout;
 }
