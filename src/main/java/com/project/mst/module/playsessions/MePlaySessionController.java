@@ -7,9 +7,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/me/play-sessions")
+@Tag(name = "Sessões", description = "Histórico paginado do próprio usuário")
 public class MePlaySessionController {
 
     private final PlaySessionService service;
@@ -19,6 +22,7 @@ public class MePlaySessionController {
     }
 
     @GetMapping
+    @Operation(summary = "Histórico paginado do próprio usuário", description = "Filtro opcional por game (slug); cada sessão vem com a pontuação.")
     public PagedModel<PlaySessionResponse> mySessions(
             @RequestParam(required = false) String game,
             @RequestParam(defaultValue = "0") int page,

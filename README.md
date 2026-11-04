@@ -49,7 +49,9 @@ Api for the system MST to the development of cognitive abilities
 | `409` | `EMAIL_ALREADY_USED`, `GAME_SLUG_IN_USE`, `SESSION_ALREADY_ENDED`, `SESSION_ABANDONED`, `SESSION_ALREADY_SCORED`, `DATA_INTEGRITY` | State or uniqueness conflicts |
 | `422` | `VALIDATION_FAILED`, `PROFILE_NOT_FOUND`, `PROFILE_REFERENCE_INVALID`, `SUDOKU_PUZZLE_INVALID` | Field validation (`errors: [{field, message}]`) and content rules |
 
-- OpenAPI generated from the code: `GET /v3/api-docs` (JSON) and `/swagger-ui.html`, both public.
+- OpenAPI generated from the code: `GET /v3/api-docs` (JSON) and `/swagger-ui.html`, both public. Endpoints are grouped by tag
+  (Autenticação, Conta, Catálogo, Sessões, Progresso, Jogo da Velha, Jogo da Memória, Quiz, Sudoku, Forca, Conteúdo (ADMIN)) with a summary,
+  the error codes each one can return and the score formulas; use *Authorize* with the token from `/auth/login` to call them from the UI.
 
 ## Authentication
 
@@ -102,17 +104,42 @@ Access rules live in `SecurityConfig`:
 
 A play session is the single record of a user playing a game. The server sets the user
 (from the token), the game, the timestamps and the status; the client never sends a score.
+Each game has its own start endpoint that opens the session; `POST /play-sessions` exists for games without one.
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/v1/play-sessions` | Starts a session: `{"gameSlug": "velha", "difficulty": "EASY", "timed": true, "clientMeta": "<json>"}`. `difficulty` and `clientMeta` are optional; `timed` defaults to the user's preference. |
-| `POST` | `/api/v1/play-sessions/{id}/finish` | Ends the session; a score is computed server-side when the game has a `ScoreCalculator`. Repeating the call returns the same state. |
+| `POST` | `/api/v1/play-sessions` | Starts a generic session: `{"gameSlug": "velha", "difficulty": "EASY", "timed": true, "clientMeta": "<json>"}`. `timed` defaults to the user's preference. |
+| `POST` | `/api/v1/play-sessions/{id}/finish` | Ends the session; the game's `ScoreCalculator` computes the score. Repeating the call returns the same state. |
 | `POST` | `/api/v1/play-sessions/{id}/abandon` | Marks the session as abandoned; `409` if already ended. |
 | `GET` | `/api/v1/me/play-sessions?game=&page=&size=` | Own sessions, newest first, each with its `score` (`value`, `breakdown`). |
+| `GET` | `/api/v1/me/progress?game=&from=&to=` | Own progress series per game and day: sessions, finished, abandoned, average duration, average score, errors and correct answers (from the score breakdown). Default period: last 30 days, max 366. |
 | `GET` | `/api/v1/play-sessions/{id}` | One session, owner or ADMIN. |
 | `GET` | `/api/v1/play-sessions?game=&page=&size=` | All sessions, ADMIN only. |
 
-A session holds at most one score and scores are never written through the API.
+Score formulas (a session holds at most one score, written only by the server):
+
+| Game | Score | Breakdown keys |
+|---|---|---|
+| `velha` | vs computer: 100 win, 50 draw, 10 loss; local 2 players: 50 per finished match | `mode`, `result`, `moves`, `seconds` |
+| `memoria` | `100 - 5 × errors`, minimum 0 | `pairs`, `errors`, `seconds` |
+| `quiz` | `floor(correct × 100 / total)` (RN-13 performance) | `correct`, `errors`, `total`, `performance`, `message`, `seconds` |
+| `sudoku` | solved: `(100 - 20 × mistakes) × level` (EASY 1, MEDIUM 2, HARD 3); otherwise 0 | `solved`, `difficulty`, `errors`, `timeLimitSeconds`, `seconds` |
+| `forca` | win: `100 - 10 × errors`; loss: 0 | `result`, `errors`, `wordLength`, `category`, `seconds` |
+
+### Games
+
+All game endpoints require a player token, open a play session on start and close it on the server when the match
+ends. Answer keys never leave the server before the end of the match.
+
+| Game | Endpoints | Rules enforced server-side |
+|---|---|---|
+| Tic-tac-toe | `POST /tic-tac-toe/matches` `{mode: LOCAL_2P \| VS_COMPUTER, timed?}` · `GET /tic-tac-toe/matches/{id}` · `POST /tic-tac-toe/matches/{id}/moves` `{row, col}` | X starts; marks alternate; 8 winning lines; draw with 9 cells; in `VS_COMPUTER` the server plays O on a random empty cell in the same response. `409 TICTACTOE_CELL_OCCUPIED`, `TICTACTOE_NOT_YOUR_TURN`, `TICTACTOE_MATCH_FINISHED`. |
+| Memory | `GET /memory/themes` · `POST /memory/rounds` `{themeId, timed?}` · `GET /memory/rounds/{id}` · `POST /memory/rounds/{id}/moves` `{position}` | 9 pairs shuffled into 18 positions stored per round; cards are identified only when flipped; the second card of each try closes the pair or counts an error; the last pair ends the session. `409 MEMORY_POSITION_ALREADY_MATCHED`, `MEMORY_POSITION_ALREADY_REVEALED`, `MEMORY_ROUND_FINISHED`; `422 MEMORY_POSITION_INVALID`. |
+| Quiz | `POST /quiz/attempts` `{quizId?, timed?}` · `GET /quiz/attempts/{id}` · `GET /quiz/attempts/{id}/questions/next` · `POST /quiz/attempts/{id}/answers` `{questionId, optionId}` · `POST /quiz/attempts/{id}/finish` | Questions in `position` order, options without `isCorrect`; one answer per question, the correct option is returned after answering; finishing requires every question answered. `404 QUIZ_NO_MORE_QUESTIONS`, `409 QUIZ_QUESTION_ALREADY_ANSWERED`, `QUIZ_QUESTIONS_PENDING`, `QUIZ_ATTEMPT_FINISHED`; `422 QUIZ_OPTION_INVALID`. |
+| Sudoku | `POST /sudoku/attempts` `{difficulty, timeLimitSeconds?: 180 \| 300 \| 600}` · `GET /sudoku/attempts/{id}` · `POST /sudoku/attempts/{id}/entries` `{cellIdx, value?}` · `POST /sudoku/attempts/{id}/reveal` | Random active puzzle of the level; givens only, never the solution; a wrong value counts a mistake and is erased; 3 mistakes = `LOSS`; 81 correct cells = `WIN`; an expired time limit ends the attempt as `TIMEOUT` (session abandoned); reveal returns the solution and abandons the session without score. `409 SUDOKU_CELL_IS_GIVEN`, `SUDOKU_ATTEMPT_FINISHED`; `422 SUDOKU_TIME_LIMIT_INVALID`. |
+| Hangman | `GET /hangman/categories` · `POST /hangman/rounds` `{category, timed?}` · `GET /hangman/rounds/{id}` · `POST /hangman/rounds/{id}/guesses` `{letter}` | Random active word of the category; mask computed on the server; letters A–Z only, no repeats; 6 errors = `LOSS`, all letters = `WIN`; the word is returned only when finished. `409 HANGMAN_LETTER_ALREADY_USED`, `HANGMAN_ROUND_FINISHED`; `422 HANGMAN_LETTER_INVALID`. |
+
+The 2048 game was removed from the catalog (BL-036, Q-05): the legacy implementation was unpublished, unstyled and unrelated to the system's purpose.
 
 ### Content administration (ADMIN)
 
@@ -131,6 +158,8 @@ The schema is owned by Flyway (`src/main/resources/db/migration`) and Hibernate 
 | `V1__core.sql` | `user`, `profile`, `user_profile`, `game`, `play_session`, `score` |
 | `V2__games_content.sql` | Memory (`card_theme`, `card_template`, `memory_round`, `memory_move`), tic-tac-toe (`tic_tac_toe_match`, `tic_tac_toe_move`), quiz (`quiz`, `question`, `option`, `quiz_attempt`, `quiz_answer`), sudoku (`sudoku_puzzle`, `sudoku_attempt`, `sudoku_entry`), hangman (`word`, `hangman_round`, `hangman_guess`) with the uniqueness and check constraints from the data model |
 | `V3__seed_content.sql` | 6 games (2048 inactive), 28 reviewed quiz questions with category, 40 hangman words, 15 generated sudoku puzzles with unique solutions, 3 card themes with 27 labelled cards |
+| `V4__gameplay.sql` | `question.position` (order of the legacy file) and `memory_round.layout` (shuffled card ids per round) |
+| `V5__remove_2048.sql` | Removes the 2048 game |
 
 Sudoku grids are stored row by row as 81 digits, `0` meaning an empty cell.
 A database created before Flyway was introduced must be recreated (`docker compose down -v`).
@@ -139,7 +168,8 @@ A database created before Flyway was introduced must be recreated (`docker compo
 
 `./mvnw test` needs no external database: unit and web-slice tests run with mocks, and
 `MstApplicationTests` starts an embedded PostgreSQL 16 (downloaded from Maven Central on first run)
-to apply the migrations, validate the schema, bootstrap the profiles and exercise login, catalog and OpenAPI.
+to apply the migrations, validate the schema, bootstrap the profiles and exercise login, catalog, OpenAPI and a
+full round of each game through the HTTP API (no answer key in any player response).
 `SeedContentTest` checks the seed file itself: every puzzle valid and unique, one correct option per question, words upper-case.
 
 ## Diagrams

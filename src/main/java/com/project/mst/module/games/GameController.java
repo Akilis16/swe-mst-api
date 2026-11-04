@@ -20,9 +20,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/games")
+@Tag(name = "Catálogo", description = "Jogos ativos; escrita restrita a ADMIN")
 public class GameController {
 
     private final GameService service;
@@ -32,11 +35,13 @@ public class GameController {
     }
 
     @GetMapping
+    @Operation(summary = "Catálogo de jogos ativos", description = "ADMIN pode passar includeInactive=true.")
     public List<GameResponse> catalog(@RequestParam(defaultValue = "false") boolean includeInactive) {
         return service.catalog(includeInactive);
     }
 
     @GetMapping("/{slug}")
+    @Operation(summary = "Jogo pelo slug")
     public GameResponse findBySlug(@PathVariable String slug) {
         return service.findBySlug(slug);
     }
@@ -55,6 +60,7 @@ public class GameController {
     }
 
     @PatchMapping("/{id}/active")
+    @Operation(summary = "Ativa ou desativa um jogo (ADMIN)")
     public GameResponse setActive(@PathVariable UUID id, @Valid @RequestBody ActiveRequest request) {
         return service.setActive(id, request.active());
     }
