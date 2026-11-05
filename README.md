@@ -77,6 +77,21 @@ curl http://localhost:8080/api/v1/games -H "Authorization: Bearer <jwt>"
 
 The token carries the user id as `sub` and the user's profile codes as `roles` (`ROLE_<CODE>` authorities).
 
+### CORS
+
+CORS is off by default: the API sends no `Access-Control-*` headers and a preflight `OPTIONS` gets `401`
+like any other unauthenticated call. Browsers therefore block pages served from another origin, which is the
+intended production setup, where nginx serves the web app and proxies `/api` on the same origin. For local
+development with the Angular app on another port, list the allowed origins in `.env`:
+
+```
+CORS_ALLOWED_ORIGINS=http://localhost:4200,http://127.0.0.1:4200
+```
+
+Listed origins get preflight answers without a token, the `GET, POST, PUT, PATCH, DELETE, OPTIONS` methods and
+the `Authorization` and `Content-Type` headers; any other origin receives `403`. Tools that do not run in a
+browser (curl, Postman, Swagger UI on the same host) are not affected either way.
+
 ### Profiles
 
 Profiles `ADMIN` and `PLAYER` are created automatically on startup. New accounts get `PLAYER`.
