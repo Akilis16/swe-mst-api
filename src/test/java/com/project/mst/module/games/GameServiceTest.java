@@ -53,16 +53,16 @@ class GameServiceTest {
     @Test
     void adminPodeListarInativos() {
         authenticateAs("ADMIN");
-        when(games.findAllActive()).thenReturn(List.of(game("velha", true), game("2048", false)));
+        when(games.findAllActive()).thenReturn(List.of(game("velha", true), game("xadrez", false)));
 
         assertThat(service.catalog(true)).hasSize(2);
     }
 
     @Test
     void jogoInativoNaoEhEncontradoPeloJogador() {
-        when(games.findEnabledBySlug("2048")).thenReturn(Optional.empty());
+        when(games.findEnabledBySlug("xadrez")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.findBySlug(" 2048 ")).isInstanceOf(EntityNotFoundException.class);
+        assertThatThrownBy(() -> service.findBySlug(" xadrez ")).isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test

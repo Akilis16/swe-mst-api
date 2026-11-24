@@ -14,7 +14,7 @@ public class OpenApiConfig {
     private static final String BEARER = "bearerAuth";
 
     private static final String DESCRIPTION = """
-        API do sistema MST (Memória, Saúde e Tecnologia): contas, catálogo, sessões, pontuação e os cinco jogos.
+        API do sistema MST (Memória, Saúde e Tecnologia): contas, catálogo, sessões, pontuação e os seis jogos.
 
         **Autenticação**: `POST /api/v1/auth/login` devolve um JWT; envie `Authorization: Bearer <token>` (botão *Authorize*).
 
@@ -27,7 +27,7 @@ public class OpenApiConfig {
 
         **Pontuação**: Velha 100 vitória / 50 empate / 10 derrota contra o computador, 50 por partida local; \
         Memória 100 − 5 × erros; Quiz = acertos × 100 / total; Sudoku (100 − 20 × erros) × nível (1, 2, 3) se resolvido; \
-        Forca 100 − 10 × erros na vitória. Revelar o Sudoku abandona a sessão sem pontuação.
+        Forca 100 − 10 × erros na vitória; 2048 = soma das fusões da partida. Revelar o Sudoku abandona a sessão sem pontuação.
         """;
 
     @Bean

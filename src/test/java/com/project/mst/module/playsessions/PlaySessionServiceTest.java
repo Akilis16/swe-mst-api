@@ -97,9 +97,9 @@ class PlaySessionServiceTest {
     @Test
     void jogoInativoOuInexistenteRetorna404() {
         when(users.findActiveById(userId)).thenReturn(Optional.of(user));
-        when(games.requireEnabledBySlug("2048")).thenThrow(new EntityNotFoundException("Jogo 2048 não encontrado"));
+        when(games.requireEnabledBySlug("xadrez")).thenThrow(new EntityNotFoundException("Jogo xadrez não encontrado"));
 
-        assertThatThrownBy(() -> service.start(new StartSessionRequest("2048", null, null, null)))
+        assertThatThrownBy(() -> service.start(new StartSessionRequest("xadrez", null, null, null)))
             .isInstanceOf(EntityNotFoundException.class);
     }
 

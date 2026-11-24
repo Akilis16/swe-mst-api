@@ -65,9 +65,9 @@ class MstApplicationTests {
 
     @Test
     void migracoesAplicadasESchemaValidado() {
-        assertThat(games.findAllActive()).hasSize(5);
-        assertThat(games.findAllActiveAndEnabled()).hasSize(5);
-        assertThat(games.findBySlug("2048")).isEmpty();
+        assertThat(games.findAllActive()).hasSize(6);
+        assertThat(games.findAllActiveAndEnabled()).hasSize(6);
+        assertThat(games.findBySlug("2048")).get().extracting(g -> g.isActive()).isEqualTo(true);
         assertThat(questions.findAllActive()).hasSize(28);
         assertThat(options.findAllActive()).hasSize(112);
         assertThat(words.findAllActive()).hasSize(40);
@@ -94,10 +94,14 @@ class MstApplicationTests {
 
         mvc.perform(get("/api/v1/games").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(5))
+            .andExpect(jsonPath("$.length()").value(6))
             .andExpect(jsonPath("$[?(@.slug=='velha')].title").value("Jogo da Velha"));
 
         mvc.perform(get("/api/v1/games/2048").header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.title").value("2048"));
+
+        mvc.perform(get("/api/v1/games/xadrez").header("Authorization", "Bearer " + token))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("NOT_FOUND"));
 
@@ -317,6 +321,52 @@ class MstApplicationTests {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"position\":18}"))
             .andExpect(status().isUnprocessableContent())
             .andExpect(jsonPath("$.code").value("MEMORY_POSITION_INVALID"));
+    }
+
+    @Test
+    void jogo2048DesenhaOTabuleiroNoServidorEEncerraComPontuacao() throws Exception {
+        String token = registerPlayer("2048");
+
+        String round = mvc.perform(post("/api/v1/2048/rounds").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.board.length()").value(4))
+            .andExpect(jsonPath("$.points").value(0))
+            .andExpect(jsonPath("$.finished").value(false))
+            .andReturn().getResponse().getContentAsString();
+        var body = JSON.readTree(round);
+        String roundId = body.get("roundId").asString();
+        String sessionId = body.get("playSessionId").asString();
+
+        mvc.perform(post("/api/v1/2048/rounds/" + roundId + "/moves").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"direction\":\"DIAGONAL\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_REQUEST"));
+
+        boolean finished = false;
+        String[] directions = {"LEFT", "UP", "RIGHT", "DOWN"};
+        for (int i = 0; i < 5000 && !finished; i++) {
+            String move = mvc.perform(post("/api/v1/2048/rounds/" + roundId + "/moves").header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"direction\":\"" + directions[i % 4] + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+            finished = JSON.readTree(move).get("finished").asBoolean();
+        }
+        assertThat(finished).isTrue();
+
+        mvc.perform(get("/api/v1/2048/rounds/" + roundId).header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.finished").value(true))
+            .andExpect(jsonPath("$.score.breakdown.maxTile").isNumber());
+
+        mvc.perform(get("/api/v1/play-sessions/" + sessionId).header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("FINISHED"));
+
+        mvc.perform(post("/api/v1/2048/rounds/" + roundId + "/moves").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"direction\":\"LEFT\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("GAME2048_ROUND_FINISHED"));
     }
 
     private String registerPlayer(String suffix) throws Exception {

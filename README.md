@@ -46,11 +46,11 @@ Api for the system MST to the development of cognitive abilities
 | `401` | `UNAUTHENTICATED`, `INVALID_CREDENTIALS` | Missing/expired/tampered token; wrong e-mail or password |
 | `403` | `FORBIDDEN`, `SESSION_FORBIDDEN` | Insufficient role; someone else's session |
 | `404` | `NOT_FOUND` | Unknown resource or inactive game |
-| `409` | `EMAIL_ALREADY_USED`, `GAME_SLUG_IN_USE`, `SESSION_ALREADY_ENDED`, `SESSION_ABANDONED`, `SESSION_ALREADY_SCORED`, `DATA_INTEGRITY` | State or uniqueness conflicts |
+| `409` | `EMAIL_ALREADY_USED`, `GAME_SLUG_IN_USE`, `SESSION_ALREADY_ENDED`, `SESSION_ABANDONED`, `SESSION_ALREADY_SCORED`, `DATA_INTEGRITY`, plus each game's rule codes (e.g. `GAME2048_ROUND_FINISHED`) | State or uniqueness conflicts |
 | `422` | `VALIDATION_FAILED`, `PROFILE_NOT_FOUND`, `PROFILE_REFERENCE_INVALID`, `SUDOKU_PUZZLE_INVALID` | Field validation (`errors: [{field, message}]`) and content rules |
 
 - OpenAPI generated from the code: `GET /v3/api-docs` (JSON) and `/swagger-ui.html`, both public. Endpoints are grouped by tag
-  (Autenticação, Conta, Catálogo, Sessões, Progresso, Jogo da Velha, Jogo da Memória, Quiz, Sudoku, Forca, Conteúdo (ADMIN)) with a summary,
+  (Autenticação, Conta, Catálogo, Sessões, Progresso, Jogo da Velha, Jogo da Memória, Quiz, Sudoku, Forca, 2048, Conteúdo (ADMIN)) with a summary,
   the error codes each one can return and the score formulas; use *Authorize* with the token from `/auth/login` to call them from the UI.
 
 ## Authentication
@@ -140,6 +140,7 @@ Score formulas (a session holds at most one score, written only by the server):
 | `quiz` | `floor(correct × 100 / total)` (RN-13 performance) | `correct`, `errors`, `total`, `performance`, `message`, `seconds` |
 | `sudoku` | solved: `(100 - 20 × mistakes) × level` (EASY 1, MEDIUM 2, HARD 3); otherwise 0 | `solved`, `difficulty`, `errors`, `timeLimitSeconds`, `seconds` |
 | `forca` | win: `100 - 10 × errors`; loss: 0 | `result`, `errors`, `wordLength`, `category`, `seconds` |
+| `2048` | points of the match: sum of every merged tile (WIN at 2048 or LOSS without moves) | `result`, `points`, `maxTile`, `moves`, `seconds` |
 
 ### Games
 
@@ -153,8 +154,9 @@ ends. Answer keys never leave the server before the end of the match.
 | Quiz | `POST /quiz/attempts` `{quizId?, timed?}` · `GET /quiz/attempts/{id}` · `GET /quiz/attempts/{id}/questions/next` · `POST /quiz/attempts/{id}/answers` `{questionId, optionId}` · `POST /quiz/attempts/{id}/finish` | Questions in `position` order, options without `isCorrect`; one answer per question, the correct option is returned after answering; finishing requires every question answered. `404 QUIZ_NO_MORE_QUESTIONS`, `409 QUIZ_QUESTION_ALREADY_ANSWERED`, `QUIZ_QUESTIONS_PENDING`, `QUIZ_ATTEMPT_FINISHED`; `422 QUIZ_OPTION_INVALID`. |
 | Sudoku | `POST /sudoku/attempts` `{difficulty, timeLimitSeconds?: 180 \| 300 \| 600}` · `GET /sudoku/attempts/{id}` · `POST /sudoku/attempts/{id}/entries` `{cellIdx, value?}` · `POST /sudoku/attempts/{id}/reveal` | Random active puzzle of the level; givens only, never the solution; a wrong value counts a mistake and is erased; 3 mistakes = `LOSS`; 81 correct cells = `WIN`; an expired time limit ends the attempt as `TIMEOUT` (session abandoned); reveal returns the solution and abandons the session without score. `409 SUDOKU_CELL_IS_GIVEN`, `SUDOKU_ATTEMPT_FINISHED`; `422 SUDOKU_TIME_LIMIT_INVALID`. |
 | Hangman | `GET /hangman/categories` · `POST /hangman/rounds` `{category, timed?}` · `GET /hangman/rounds/{id}` · `POST /hangman/rounds/{id}/guesses` `{letter}` | Random active word of the category; mask computed on the server; letters A–Z only, no repeats; 6 errors = `LOSS`, all letters = `WIN`; the word is returned only when finished. `409 HANGMAN_LETTER_ALREADY_USED`, `HANGMAN_ROUND_FINISHED`; `422 HANGMAN_LETTER_INVALID`. |
+| 2048 | `POST /2048/rounds` `{timed?}` · `GET /2048/rounds/{id}` · `POST /2048/rounds/{id}/moves` `{direction: LEFT \| RIGHT \| UP \| DOWN}` | 4x4 board stored per round, starting with two 2s; tiles slide to the edge and equal neighbours merge once per move, adding their value to the points; a move that changes the board spawns a 2 on a random empty cell (a move that changes nothing returns `moved: false`); reaching 2048 = `WIN`, no possible move = `LOSS`, both finish and score the session. `409 GAME2048_ROUND_FINISHED`. |
 
-The 2048 game was removed from the catalog (BL-036, Q-05): the legacy implementation was unpublished, unstyled and unrelated to the system's purpose.
+The 2048 game, removed in `V5` (BL-036, Q-05), came back in `V6` once the web app rebuilt it with styles and the rules above moved to the server.
 
 ### Content administration (ADMIN)
 
@@ -175,6 +177,7 @@ The schema is owned by Flyway (`src/main/resources/db/migration`) and Hibernate 
 | `V3__seed_content.sql` | 6 games (2048 inactive), 28 reviewed quiz questions with category, 40 hangman words, 15 generated sudoku puzzles with unique solutions, 3 card themes with 27 labelled cards |
 | `V4__gameplay.sql` | `question.position` (order of the legacy file) and `memory_round.layout` (shuffled card ids per round) |
 | `V5__remove_2048.sql` | Removes the 2048 game |
+| `V6__restore_2048.sql` | Restores the 2048 game (active) and adds `game_2048_round` (board as jsonb, points, moves, max tile, result) |
 
 Sudoku grids are stored row by row as 81 digits, `0` meaning an empty cell.
 A database created before Flyway was introduced must be recreated (`docker compose down -v`).
